@@ -533,6 +533,28 @@ function! s:get_git_root()
   return v:shell_error ? '' : root
 endfunction
 
+
+let s:fzf_current_script_dir = fnamemodify(expand('<sfile>'), ':p:h')
+let s:fzf_git_ls_script = s:fzf_current_script_dir . '/git_ls_absolute.bash'
+if ! executable(s:fzf_git_ls_script)
+  echoe 'git_ls_absolute.bash not found in ' . expand('<sfile>:p')
+endif
+
+function! fzf#vim#gitfiles_multi(roots) abort
+  let source_command = "{ "
+  for root in a:roots
+    let source_command .= printf("%s '%s'; ", s:fzf_git_ls_script, root)
+  endfor
+  let source_command .= " } | uniq"
+  echom source_command
+
+  return s:fzf('gfiles', {
+  \ 'source':  source_command,
+  \ 'dir':     getcwd(-1),
+  \ 'options': '-m --prompt "GitFiles> "'
+  \}, a:000)
+endfunction
+
 function! fzf#vim#gitfiles(args, ...)
   let root = s:get_git_root()
   if empty(root)
